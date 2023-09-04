@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Life Simulator</title>
+
+    <style>
+        /* CSS for table borders */
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+    
+        table, th, td {
+            border: 1px solid black;
+        }
+    
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+    
+        /* Styling for the input fields */
+        .input-container {
+            display: flex;
+            flex-direction: column;
+            align-items: start;
+            width: 300px; /* Adjust width as necessary */
+            margin: 20px 0;
+        }
+
+        input {
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+            width: 90%;  /* Use the percentage or fixed width as you like */
+        }
+    
+        label {
+            display: block;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    
+        button {
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: #FFF;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+    
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<!-- React and ReactDOM scripts -->
+<script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+
+<!-- Babel for in-browser JSX translation -->
+<script src="https://unpkg.com/babel-standalone@6.26.0/babel.min.js"></script>
+
+<!-- Your React code, but with type="text/babel" to make it use Babel -->
+<script type="text/babel">
+    // From https://www.ssa.gov/oact/STATS/table4c6.html
+    const ACTUARIAL_TABLE = {
+        // [male, female]
+        0: [0.005837,0.004907],
+        1: [0.00041,0.000316],
+        2: [0.000254,0.000196],
+        3: [0.000207,0.00016],
+        4: [0.000167,0.000129],
+        5: [0.000141,0.000109],
+        6: [0.000123,0.0001],
+        7: [0.000113,0.000096],
+        8: [0.000108,0.000092],
+        9: [0.000114,0.000089],
+        10: [0.000127,0.000092],
+        11: [0.000146,0.000104],
+        12: [0.000174,0.000123],
+        13: [0.000228,0.000145],
+        14: [0.000312,0.000173],
+        15: [0.000435,0.00021],
+        16: [0.000604,0.000257],
+        17: [0.000814,0.000314],
+        18: [0.001051,0.000384],
+        19: [0.00125,0.00044],
+        20: [0.001398,0.000485],
+        21: [0.001524,0.000533],
+        22: [0.001612,0.000574],
+        23: [0.001682,0.000617],
+        24: [0.001747,0.000655],
+        25: [0.001812,0.0007],
+        26: [0.001884,0.000743],
+        27: [0.001974,0.000796],
+        28: [0.00207,0.000851],
+        29: [0.002172,0.000914],
+        30: [0.002275,0.000976],
+        31: [0.002368,0.001041],
+        32: [0.002441,0.001118],
+        33: [0.002517,0.001186],
+        34: [0.00259,0.001241],
+        35: [0.002673,0.001306],
+        36: [0.002791,0.001386],
+        37: [0.002923,0.001472],
+        38: [0.003054,0.001549],
+        39: [0.003207,0.001637],
+        40: [0.003333,0.001735],
+        41: [0.003464,0.00185],
+        42: [0.003587,0.00195],
+        43: [0.003735,0.002072],
+        44: [0.003911,0.002217],
+        45: [0.004137,0.002383],
+        46: [0.004452,0.002573],
+        47: [0.004823,0.002777],
+        48: [0.005214,0.002984],
+        49: [0.005594,0.00321],
+        50: [0.005998,0.003476],
+        51: [0.0065,0.003793],
+        52: [0.007081,0.004136],
+        53: [0.007711,0.004495],
+        54: [0.008394,0.00487],
+        55: [0.009109,0.005261],
+        56: [0.009881,0.005714],
+        57: [0.010687,0.006227],
+        58: [0.011566,0.006752],
+        59: [0.012497,0.007327],
+        60: [0.013485,0.007926],
+        61: [0.014595,0.008544],
+        62: [0.015702,0.009173],
+        63: [0.016836,0.009841],
+        64: [0.017908,0.010529],
+        65: [0.018943,0.011265],
+        66: [0.020103,0.012069],
+        67: [0.021345,0.012988],
+        68: [0.02275,0.014032],
+        69: [0.024325,0.015217],
+        70: [0.026137,0.016634],
+        71: [0.028125,0.018294],
+        72: [0.030438,0.020175],
+        73: [0.033249,0.022321],
+        74: [0.036975,0.02503],
+        75: [0.040633,0.027715],
+        76: [0.04471,0.030631],
+        77: [0.049152,0.0339],
+        78: [0.054265,0.037831],
+        79: [0.059658,0.042249],
+        80: [0.065568,0.047148],
+        81: [0.07213,0.052545],
+        82: [0.079691,0.058685],
+        83: [0.088578,0.065807],
+        84: [0.098388,0.074052],
+        85: [0.109139,0.083403],
+        86: [0.120765,0.093798],
+        87: [0.133763,0.104958],
+        88: [0.14837,0.117435],
+        89: [0.164535,0.13154],
+        90: [0.182632,0.146985],
+        91: [0.202773,0.163592],
+        92: [0.223707,0.181562],
+        93: [0.245124,0.200724],
+        94: [0.266933,0.219958],
+        95: [0.288602,0.23946],
+        96: [0.309781,0.258975],
+        97: [0.330099,0.278225],
+        98: [0.349177,0.296912],
+        99: [0.366635,0.314727],
+        100: [0.384967,0.33361],
+        101: [0.404215,0.353627],
+        102: [0.424426,0.374844],
+        103: [0.445648,0.397335],
+        104: [0.46793,0.421175],
+        105: [0.491326,0.446446],
+        106: [0.515893,0.473232],
+        107: [0.541687,0.501626],
+        108: [0.568772,0.531724],
+        109: [0.59721,0.563627],
+        110: [0.627071,0.597445],
+        111: [0.658424,0.633292],
+        112: [0.691346,0.671289],
+        113: [0.725913,0.711567],
+        114: [0.762209,0.754261],
+        115: [0.800319,0.799516],
+        116: [0.840335,0.840335],
+        117: [0.882352,0.882352],
+        118: [0.926469,0.926469],
+        119: [0.972793,0.972793],
+    };
+
+    function boxMuller() {
+        let u = 0;
+        let v = 0;
+
+        // Convert [0,1) random into (0,1) to avoid log(0)
+        while (u === 0) u = Math.random();
+        while (v === 0) v = Math.random();
+
+        let num = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+
+        return num;
+    }
+
+    function normalSample(mean = 0, stdDev = 1) {
+        return mean + stdDev * boxMuller();
+    }
+
+    function Currency({ value, currency = 'USD', locale = 'en-US' }) {
+        return (
+            <span>
+            {new Intl.NumberFormat(locale, {
+                style: 'currency',
+                currency: currency,
+            }).format(value)}
+            </span>
+        );
+    }
+
+    function Simulator() {
+        const [startingAge, setStartingAge] = React.useState(25);
+        const [startingSpouseAge, setStartingSpouseAge] = React.useState(23);
+        const [startingMotherAge, setStartingMotherAge] = React.useState(54);
+        const [startingFatherAge, setStartingFatherAge] = React.useState(57);
+        const [startingKid1Age, setStartingKid1Age] = React.useState(2);
+        const [startingKid2Age, setStartingKid2Age] = React.useState(0);
+        const [startingWealth, setStartingWealth] = React.useState(250000);
+        const [results, setResults] = React.useState([]);
+
+        const runSimulation = () => {
+            let age = startingAge;
+            let spouseAge = startingSpouseAge;
+            let motherAge = startingMotherAge;
+            let fatherAge = startingFatherAge;
+            let kid1Age = startingKid1Age;
+            let kid2Age = startingKid2Age;
+            let wealth = startingWealth;
+            let wealth_return = 0;
+            let inflation = 1.0;
+            let inflation_rate = 0;
+            let alive = true;
+            let spouseAlive = true;
+            let motherAlive = true;
+            let fatherAlive = true;
+            let kid1Alive = true;
+            let kid2Alive = true;
+            let yearlyResults = [];
+
+            while (alive || spouseAlive || motherAlive || fatherAlive || kid1Alive || kid2Alive) {
+                let chanceOfDeath = ACTUARIAL_TABLE[age][0] || 0.97;
+                let chanceOfSpouseDeath = ACTUARIAL_TABLE[spouseAge][1] || 0.97;
+                let chanceOfMotherDeath = ACTUARIAL_TABLE[motherAge][1] || 0.97;
+                let chanceOfFatherDeath = ACTUARIAL_TABLE[fatherAge][0] || 0.97;
+                let chanceOfKid1Death = ACTUARIAL_TABLE[kid1Age][0] || 0.97;
+                let chanceOfKid2Death = ACTUARIAL_TABLE[kid2Age][0] || 0.97;
+                if(alive) {alive = Math.random() > chanceOfDeath;}
+                if(spouseAlive) {spouseAlive = Math.random() > chanceOfSpouseDeath;}
+                if(motherAlive) {motherAlive = Math.random() > chanceOfMotherDeath;}
+                if(fatherAlive) {fatherAlive = Math.random() > chanceOfFatherDeath;}
+                if(kid1Alive) {kid1Alive = Math.random() > chanceOfKid1Death;}
+                if(kid2Alive) {kid2Alive = Math.random() > chanceOfKid2Death;}
+                wealth_return = normalSample(0.094, 0.1815);
+                inflation_rate = normalSample(0.025, 0.012);
+
+                yearlyResults.push({
+                    alive,
+                    age,
+                    spouseAlive,
+                    spouseAge,
+                    motherAlive,
+                    motherAge,
+                    fatherAlive,
+                    fatherAge,
+                    kid1Alive,
+                    kid1Age,
+                    kid2Alive,
+                    kid2Age,
+                    wealth,
+                    wealth_return,
+                    inflation,
+                    inflation_rate
+                });
+
+                if(alive) {age++;}
+                if(spouseAlive) {spouseAge++;}
+                if(motherAlive) {motherAge++;}
+                if(fatherAlive) {fatherAge++;}
+                if(kid1Alive) {kid1Age++;}
+                if(kid2Alive) {kid2Age++;}
+                wealth *= 1 + wealth_return;
+                inflation *= 1 + inflation_rate;
+            }
+
+            setResults(yearlyResults);
+        };
+
+        return (
+            <div>
+                <h1>Life Simulator</h1>
+                <div class="input-container">
+                    <label>
+                        Starting Age:
+                        <input
+                            type="number"
+                            value={startingAge}
+                            onChange={(e) => setStartingAge(Number(e.target.value))}
+                        />
+                    </label>
+                    <label>
+                        Starting Spouse Age:
+                        <input
+                            type="number"
+                            value={startingSpouseAge}
+                            onChange={(e) => setStartingSpouseAge(Number(e.target.value))}
+                        />
+                    </label>
+                    <label>
+                        Starting Mother Age:
+                        <input
+                            type="number"
+                            value={startingMotherAge}
+                            onChange={(e) => setStartingMotherAge(Number(e.target.value))}
+                        />
+                    </label>
+                    <label>
+                        Starting Father Age:
+                        <input
+                            type="number"
+                            value={startingFatherAge}
+                            onChange={(e) => setStartingFatherAge(Number(e.target.value))}
+                        />
+                    </label>
+                    <label>
+                        Starting Kid1 Age:
+                        <input
+                            type="number"
+                            value={startingKid1Age}
+                            onChange={(e) => setStartingKid1Age(Number(e.target.value))}
+                        />
+                    </label>
+                    <label>
+                        Starting Kid2 Age:
+                        <input
+                            type="number"
+                            value={startingKid2Age}
+                            onChange={(e) => setStartingKid2Age(Number(e.target.value))}
+                        />
+                    </label>
+                    <label>
+                        Starting Wealth:
+                        <input
+                            type="number"
+                            value={startingWealth}
+                            onChange={(e) => setStartingWealth(Number(e.target.value))}
+                        />
+                    </label>
+                    <button onClick={runSimulation}>Run Simulation</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Age</th>
+                            <th>Spouse Age</th>
+                            <th>Mother Age</th>
+                            <th>Father Age</th>
+                            <th>Kid 1 Age</th>
+                            <th>Kid 2 Age</th>
+                            <th>Nominal Wealth</th>
+                            <th>Nominal Return</th>
+                            <th>Inflation</th>
+                            <th>Inflation Rate</th>
+                            <th>Real Wealth</th>
+                            <th>Real Return</th>
+                            <th>3% PWR (Real)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {results.map((result, idx) => (
+                            <tr key={idx}>
+                                <td>{result.alive ? result.age : ''}</td>
+                                <td>{result.spouseAlive ? result.spouseAge : ''}</td>
+                                <td>{result.motherAlive ? result.motherAge : ''}</td>
+                                <td>{result.fatherAlive ? result.fatherAge : ''}</td>
+                                <td>{result.kid1Alive ? result.kid1Age : ''}</td>
+                                <td>{result.kid2Alive ? result.kid2Age : ''}</td>
+                                <td><Currency value={result.wealth} /></td>
+                                <td>{(result.wealth_return * 100).toFixed(2)}%</td>
+                                <td>{(result.inflation).toFixed(2)}</td>
+                                <td>{(result.inflation_rate * 100).toFixed(2)}%</td>
+                                <td><Currency value={result.wealth / result.inflation} /></td>
+                                <td>{((result.wealth_return - result.inflation_rate) * 100).toFixed(2)}%</td>
+                                <td><Currency value={result.wealth / result.inflation * 0.03} /></td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        );
+    }
+
+    ReactDOM.render(<Simulator />, document.getElementById('root'));
+</script>
+
+</body>
+</html>

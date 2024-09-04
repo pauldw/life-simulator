@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Actuarial Table Simulator</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        #result, #simulations {
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        #chartContainer {
+            width: 100%;
+            height: 400px;
+        }
+        .person-inputs {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Life Together Simulator</h1>
+    <p>Enter information for two people to see their expected lifespans and simulations based on US Social Security Office actuarial tables for 2021.</p>
+    <form id="lifespanForm">
+        <div class="person-inputs">
+            <h3>Person 1</h3>
+            <label for="sex1">Sex:</label>
+            <select id="sex1" required>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+            </select>
+            <label for="age1">Current Age:</label>
+            <input type="number" id="age1" min="0" max="119" required>
+        </div>
+        <div class="person-inputs">
+            <h3>Person 2</h3>
+            <label for="sex2">Sex:</label>
+            <select id="sex2" required>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+            </select>
+            <label for="age2">Current Age:</label>
+            <input type="number" id="age2" min="0" max="119" required>
+        </div>
+        <label for="simCount">Number of Simulations:</label>
+        <input type="number" id="simCount" min="10" max="10000" value="1000" required>
+        <button type="submit">Calculate</button>
+    </form>
+    <div id="result"></div>
+    <div id="simulations"></div>
+    <div id="chartContainer">
+        <canvas id="distributionChart"></canvas>
+    </div>
+
+    <script src="actuarial-data.js"></script>
+    <script>
+        let currentChart = null;
+
+        function calculateLifeExpectancy(sex, age) {
+            if (age < 0 || age > 119) {
+                return "Invalid age";
+            }
+
+            let expectancy = 0;
+            let survivalProbability = 1;
+
+            for (let i = age; i <= 119; i++) {
+                survivalProbability *= (1 - actuarialData[sex][i]);
+                expectancy += survivalProbability;
+            }
+
+            return expectancy;
+        }
+
+        function simulateLifespan(sex, age) {
+            let currentAge = age;
+            while (currentAge <= 119) {
+                if (Math.random() < actuarialData[sex][currentAge]) {
+                    return currentAge;
+                }
+                currentAge++;
+            }
+            return 120;
+        }
+
+        function runSimulations(sex, age, count) {
+            const simulations = [];
+            for (let i = 0; i < count; i++) {
+                simulations.push(simulateLifespan(sex, age));
+            }
+            return simulations;
+        }
+
+        function createDistributionChart(simulations1, simulations2, startAge1, startAge2) {
+            const currentYear = new Date().getFullYear();
+            const maxYear = currentYear + 120 - Math.min(startAge1, startAge2);
+            const years1 = {};
+            const years2 = {};
+            
+            // Initialize all years from currentYear to maxYear with 0
+            for (let year = currentYear; year <= maxYear; year++) {
+                years1[year] = 0;
+                years2[year] = 0;
+            }
+
+            // Count the occurrences of each year of death in the simulations
+            simulations1.forEach(age => { years1[currentYear + age - startAge1]++; });
+            simulations2.forEach(age => { years2[currentYear + age - startAge2]++; });
+
+            const labels = Object.keys(years1).map(Number).sort((a, b) => a - b);
+            const data1 = labels.map(year => years1[year]);
+            const data2 = labels.map(year => years2[year]);
+
+            const ctx = document.getElementById('distributionChart').getContext('2d');
+
+            // Destroy the existing chart if it exists
+            if (currentChart) {
+                currentChart.destroy();
+            }
+
+            currentChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Person 1',
+                            data: data1,
+                            backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Person 2',
+                            data: data2,
+                            backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Year of Death'
+                            },
+                            ticks: {
+                                callback: function(value, index, values) {
+                                    return index % 5 === 0 ? this.getLabelForValue(value) : '';
+                                }
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Frequency'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `Distribution of Simulated Years of Death`
+                        }
+                    }
+                }
+            });
+        }
+
+        document.getElementById('lifespanForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const sex1 = document.getElementById('sex1').value;
+            const age1 = parseInt(document.getElementById('age1').value);
+            const sex2 = document.getElementById('sex2').value;
+            const age2 = parseInt(document.getElementById('age2').value);
+            const simCount = parseInt(document.getElementById('simCount').value);
+            
+            const lifeExpectancy1 = calculateLifeExpectancy(sex1, age1);
+            const lifeExpectancy2 = calculateLifeExpectancy(sex2, age2);
+            
+            if (lifeExpectancy1 === "Invalid age" || lifeExpectancy2 === "Invalid age") {
+                document.getElementById('result').textContent = "Please enter valid ages between 0 and 119 for both people.";
+                document.getElementById('simulations').textContent = "";
+                document.getElementById('chartContainer').style.display = 'none';
+            } else {
+                const currentYear = new Date().getFullYear();
+                const result1 = `Person 1 (${sex1}, ${age1}): Expected to live ${lifeExpectancy1.toFixed(2)} more years, until around ${Math.round(currentYear + lifeExpectancy1)}, reaching an age of about ${Math.round(age1 + lifeExpectancy1)}.`;
+                const result2 = `Person 2 (${sex2}, ${age2}): Expected to live ${lifeExpectancy2.toFixed(2)} more years, until around ${Math.round(currentYear + lifeExpectancy2)}, reaching an age of about ${Math.round(age2 + lifeExpectancy2)}.`;
+                
+                document.getElementById('result').innerHTML = result1 + '<br><br>' + result2;
+
+                const simulations1 = runSimulations(sex1, age1, simCount);
+                const simulations2 = runSimulations(sex2, age2, simCount);
+                
+                let simulationText = `${simCount} simulations for each person:<br>`;
+                simulationText += `Person 1: Min: ${Math.min(...simulations1)}, Max: ${Math.max(...simulations1)}, Median: ${simulations1.sort((a, b) => a - b)[Math.floor(simCount / 2)]}<br>`;
+                simulationText += `Person 2: Min: ${Math.min(...simulations2)}, Max: ${Math.max(...simulations2)}, Median: ${simulations2.sort((a, b) => a - b)[Math.floor(simCount / 2)]}`;
+                document.getElementById('simulations').innerHTML = simulationText;
+
+                document.getElementById('chartContainer').style.display = 'block';
+                createDistributionChart(simulations1, simulations2, age1, age2);
+            }
+        });
+    </script>
+</body>
+</html>
